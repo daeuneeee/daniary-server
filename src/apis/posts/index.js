@@ -1,71 +1,49 @@
 const express = require("express");
+const { AppDataSource } = require("../../data-source");
 const router = express.Router();
-
-const posts = {
-  data: [],
-};
+const { Post } = require("../../entities/post");
 
 // 전체 조회
-router.get("/", (req, res) => {
-  res.send(posts);
+router.get("/", async (req, res) => {
+  const result = await AppDataSource.getRepository(Post).find();
+  res.json(result);
 });
 
 // 단일 조회
-router.get("/:postId", (req, res) => {
-  const post = posts.data.find(
-    (post) => post.id === parseInt(req.params.postId)
-  );
-  if (!post) return res.json({ error: "존재하지 않는 글입니다." });
-  res.json(post);
+router.get("/:postId", async (req, res) => {
+  const result = await AppDataSource.getRepository(Post).findOneBy({
+    id: req.params.postId,
+  });
+  res.json(result);
 });
 
 // 등록
-router.post("/", (req, res) => {
-  const { title, contents } = req.body;
-  if (!title || !contents)
-    return res
-      .status(400)
-      .json({ error: "제목과 내용은 필수 입력 사항입니다." });
+router.post("/", async (req, res) => {
+  const post = await AppDataSource.getRepository(Post).create(req.body);
+  const result = await AppDataSource.getRepository(Post).save(post);
 
-  posts.data.push({
-    id: posts.data.length,
-    ...req.body,
-    date: new Date(),
-  });
-
-  res.json({ message: "글을 성공적으로 등록하였습니다." });
+  return res.send(result);
 });
 
 // 수정
-router.put("/:postId", (req, res) => {
-  const { title, contents } = req.body;
-  if (!req.params.postId || !title || !contents)
-    return res
-      .status(400)
-      .json({ error: "제목과 내용은 필수 입력 사항입니다." });
-
-  const post = posts.data.find(
-    (post) => post.id === parseInt(req.params.postId)
-  );
+router.put("/:postId", async (req, res) => {
+  const post = await AppDataSource.getRepository(Post).findOneBy({
+    id: req.params.postId,
+  });
   if (!post) return res.json({ error: "존재하지 않는 글입니다." });
-  console.log("1: ", posts.data);
-  console.log("2: ", title, contents);
-  post.title = title;
-  post.contents = contents;
-  res.json({ message: "글을 수정했습니다." });
+  AppDataSource.getRepository(Post).merge(post, req.body);
+  const result = await AppDataSource.getRepository(Post).save(post);
+  res.send(result);
 });
 
-router.delete("/:postId", (req, res) => {
-  if (!req.params.postId)
-    return res.status(400).json({ error: "id는 필수 입력 사항입니다." });
-
-  const post = posts.data.find(
-    (post) => post.id === parseInt(req.params.postId)
-  );
+// 삭제
+router.delete("/:postId", async (req, res) => {
+  const post = await AppDataSource.getRepository(Post).findOneBy({
+    id: req.params.postId,
+  });
   if (!post) return res.json({ error: "존재하지 않는 글입니다." });
-
-  posts.data = posts.data.filter((deletePost) => deletePost.id !== post.id);
-  res.json({ message: "글이 삭제되었습니다." });
+  await AppDataSource.getRepository(Post).delete(post);
+  return res.send("삭제성공");
 });
 
 module.exports = router;
