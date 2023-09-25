@@ -20,5 +20,5 @@ export class Post {
   preview: string;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 }
